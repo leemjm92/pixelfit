@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PixelFit Pet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="user-info">
+                <h1>Hello, User</h1>
+                <p id="dateDisplay">Saturday, 27 Dec</p>
+            </div>
+            <div class="balance-badge">
+                <span class="coin-icon">●</span>
+                <span id="creditDisplay">0</span>
+            </div>
+        </header>
+
+        <!-- Tab 1: Pet / Home -->
+        <div id="tab-home" class="content-area active">
+            <div class="pet-stage">
+                <div class="pet-canvas-container">
+                    <canvas id="petCanvas" width="64" height="64"></canvas>
+                </div>
+                <h2 id="petName" style="margin-top: 10px; font-size: 20px;">Pixel</h2>
+                <div class="pet-stats">
+                    <div class="stat-pill">❤️ <span id="happinessDisplay">50%</span></div>
+                    <div class="stat-pill">⭐ Lvl <span id="levelDisplay">1</span></div>
+                </div>
+                <p id="petMessage" style="margin-top: 15px; font-size: 14px; color: var(--text-light); height: 20px;">"I'm hungry!"</p>
+            </div>
+
+            <div class="pet-actions">
+                <button class="action-btn secondary" onclick="feedPet()">
+                    <span style="font-size: 24px">🍎</span>
+                    <span>Feed (50c)</span>
+                </button>
+                <button class="action-btn primary" onclick="playPet()">
+                    <span style="font-size: 24px">🎾</span>
+                    <span>Play (20c)</span>
+                </button>
+            </div>
+
+            <div style="margin-top: 25px;">
+                <div class="section-title">
+                    <span>Recent Activity</span>
+                </div>
+                <div class="task-card task-card-static" style="cursor: default;">
+                     <div class="task-info">
+                         <div class="task-details">
+                             <h3 id="lastActivityTitle">No activity yet</h3>
+                             <p id="lastActivityTime">--</p>
+                         </div>
+                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Tasks -->
+        <div id="tab-tasks" class="content-area">
+            <div class="section-title">
+                <span>Daily Challenges</span>
+            </div>
+            
+            <!-- Standard Daily Task: Weigh In -->
+            <div class="task-card task-card-static" id="weighInTask" onclick="openWeighInModal()">
+                <div class="task-info">
+                    <div class="task-icon-box" style="color: var(--primary);">⚖️</div>
+                    <div class="task-details">
+                        <h3>Daily Weigh-In</h3>
+                        <p>Track your progress (+100c)</p>
+                    </div>
+                </div>
+                <div class="task-checkbox" id="weighInCheckbox"></div>
+            </div>
+
+            <!-- Missing Weigh-In Placeholder -->
+            <div id="missingWeighInContainer"></div>
+
+            <!-- Dynamic Tasks List -->
+            <div id="tasksList"></div>
+
+            <div class="fab" onclick="openAddTaskModal()">+</div>
+        </div>
+
+        <!-- Tab 3: Stats -->
+        <div id="tab-stats" class="content-area">
+            <div class="section-title">Weight History</div>
+            <div class="chart-card">
+                <canvas id="weightChart"></canvas>
+            </div>
+            
+            <div class="section-title">Weight Stats</div>
+            <div class="task-card task-card-static" style="cursor: default; display: block;">
+                <div class="stat-row">
+                    <span>Current Weight</span>
+                    <strong id="currentWeightDisplay">-- kg</strong>
+                </div>
+                <div class="stat-row">
+                    <span>Total Change</span>
+                    <strong id="totalLostDisplay">-- kg</strong>
+                </div>
+            </div>
+
+            <div class="section-title">Workout Stats</div>
+            <div id="workoutStatsList" style="padding-bottom: 20px;">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="switchTab('home')">
+                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                <span>Home</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('tasks')">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 4c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1.4c0-2 4-3.1 6-3.1s6 1.1 6 3.1V19z"/></svg>
+                <span>Tasks</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('stats')">
+                <svg viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+                <span>Stats</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Weigh In Modal -->
+    <div class="modal-overlay" id="weighInModal">
+        <div class="modal">
+            <h2>Log Weight</h2>
+            <div class="form-group">
+                <label class="form-label">Today's Weight (kg)</label>
+                <input type="number" id="weightInput" class="form-input" placeholder="e.g. 75.5" step="0.1">
+            </div>
+            <button class="btn-primary" onclick="submitWeight()">Save & Earn 100c</button>
+            <button class="btn-primary btn-cancel" onclick="closeModal('weighInModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Missing Weigh In Modal -->
+    <div class="modal-overlay" id="missingWeighInModal">
+        <div class="modal">
+            <h2 style="color: var(--warning);">Missed Log!</h2>
+            <p style="text-align: center; margin-bottom: 15px; color: var(--text-light);">Let's catch up on your progress.</p>
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" id="missingDateInput" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Weight (kg)</label>
+                <input type="number" id="missingWeightInput" class="form-input" placeholder="e.g. 75.5" step="0.1">
+            </div>
+            <button class="btn-primary" onclick="submitMissingWeight()">Save Log</button>
+            <button class="btn-primary btn-cancel" onclick="closeModal('missingWeighInModal')">Skip for now</button>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal-overlay" id="addTaskModal">
+        <div class="modal">
+            <h2>New Challenge</h2>
+            <div class="form-group">
+                <label class="form-label">Challenge Name</label>
+                <input type="text" id="newTaskName" class="form-input" placeholder="e.g. Pushups">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Target Reps / Goal</label>
+                <input type="number" id="newTaskGoal" class="form-input" placeholder="e.g. 50">
+            </div>
+            <button class="btn-primary" onclick="submitNewTask()">Create Challenge</button>
+            <button class="btn-primary btn-cancel" onclick="closeModal('addTaskModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Log Progress Modal -->
+    <div class="modal-overlay" id="logProgressModal">
+        <div class="modal">
+            <h2 id="logProgressTitle">Log Activity</h2>
+            <div class="form-group">
+                <label class="form-label">Reps Completed</label>
+                <input type="number" id="logProgressAmount" class="form-input" placeholder="e.g. 10">
+            </div>
+            <button class="btn-primary" onclick="submitLogProgress()">Add Progress</button>
+            <button class="btn-primary btn-cancel" onclick="closeModal('logProgressModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span id="toastIcon">🎉</span>
+        <span id="toastMessage">Task Complete!</span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Application Logic -->
+    <script src="db.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
