@@ -247,6 +247,7 @@ canvas#petCanvas {
     align-items: center;
     gap: 15px;
     flex: 1;
+    min-width: 0; /* Critical for truncation in flex child */
     pointer-events: none; /* Let clicks pass through to card unless button */
 }
 
@@ -259,25 +260,37 @@ canvas#petCanvas {
     align-items: center;
     justify-content: center;
     font-size: 24px;
+    flex-shrink: 0;
 }
 
 .task-details {
     flex: 1;
+    min-width: 0; /* Double ensure truncation works */
+    overflow: hidden;
 }
 
 .task-details h3 {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .task-details p {
     font-size: 12px;
     color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .task-progress-container {
     text-align: right;
+    margin-left: 10px;
+    flex-shrink: 0; /* Keep size stable */
+    white-space: nowrap; /* Prevent wrapping of counts */
 }
 
 .task-progress-text {

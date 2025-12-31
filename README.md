@@ -14,6 +14,7 @@ A minimalist, vibe-coded fitness tracker and virtual pet. Log your progress, ear
    python3 server.py
    ```
 2. Open `weight-tracker.html` in your browser (defaults to `http://localhost:8000/weight-tracker.html`).
+3. **Live Demo:** [PixelFit on GitHub Pages](https://leemjm92.github.io/pixelfit/weight-tracker.html) (Local storage mode only).
 
 ## Tech Stack
 - **Frontend:** HTML5, CSS3, Vanilla JavaScript, Chart.js.
