@@ -109,8 +109,16 @@
             </div>
 
             <div class="section-title">Workout Stats</div>
-            <div id="workoutStatsList" style="padding-bottom: 20px;">
-                <!-- Populated by JS -->
+            <div style="margin-bottom: 10px;">
+                <select id="workoutStatsSelect" class="form-input" onchange="updateWorkoutChart()" style="margin-bottom: 15px;">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div class="chart-card">
+                <canvas id="workoutChart"></canvas>
+            </div>
+            <div id="workoutStatsList" style="padding-bottom: 20px; display: none;">
+                <!-- Populated by JS (Hidden now, keeping as backup or removing if fully replaced) -->
             </div>
         </div>
 

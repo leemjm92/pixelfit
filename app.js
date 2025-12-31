@@ -14,6 +14,7 @@ window.closeModal = closeModal;
 window.showToast = showToast;
 window.updateUI = updateUI;
 window.updateChart = updateChart;
+window.updateWorkoutChart = updateWorkoutChart;
 window.onDBReady = onDBReady;
 
 function showToast(msg, icon) {
@@ -503,7 +504,8 @@ function switchTab(tabId) {
     if(tabId === 'stats') {
          icons[2].classList.add('active');
          updateChart();
-         updateWorkoutStats();
+         updateWorkoutStats(); // Keeps the list populated if we ever unhide it
+         updateWorkoutChart(); // Updates the new chart
     }
 }
 
@@ -552,6 +554,146 @@ function updateChart() {
                 x: {
                     grid: { display: false },
                     border: { display: false }
+                }
+            }
+        }
+    });
+}
+
+let workoutChartInstance;
+
+function updateWorkoutChart() {
+    const select = document.getElementById('workoutStatsSelect');
+    const ctxEl = document.getElementById('workoutChart');
+    if (!select || !ctxEl) return;
+    
+    const tasks = getChallenges();
+    if (tasks.length === 0) {
+        // No tasks
+        select.style.display = 'none';
+        ctxEl.style.display = 'none';
+        return;
+    } else {
+        select.style.display = 'block';
+        ctxEl.style.display = 'block';
+    }
+
+    // Populate Select if empty
+    if (select.options.length === 0) {
+        tasks.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            select.appendChild(opt);
+        });
+    } else {
+        // Just verify current selection is valid, or refresh list if needed?
+        // For simplicity, we assume tasks don't change frequently while on this screen.
+        // If tasks changed, we might want to rebuild the options.
+        // Let's rebuild options if counts differ or force rebuild.
+        if (select.options.length !== tasks.length) {
+            const currentVal = select.value;
+            select.innerHTML = '';
+             tasks.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                select.appendChild(opt);
+            });
+            if (currentVal) select.value = currentVal;
+        }
+    }
+
+    const selectedId = parseInt(select.value) || tasks[0].id;
+    const task = tasks.find(t => t.id === selectedId);
+    if (!task) return;
+
+    // Prepare Data for Last 7 Days
+    const labels = [];
+    const completedData = [];
+    const remainingData = [];
+    
+    const today = new Date();
+    // Use local time for chart labels logic to match getTodayKey
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+        
+        labels.push(d.toLocaleDateString('en-US', {weekday: 'short'}));
+        
+        const logs = getActivityLogs(dateKey, task.id);
+        const totalDone = logs.reduce((acc, l) => acc + l.val, 0);
+        
+        // Bar logic:
+        // Total Height = Task Goal (e.g. 50)
+        // Completed = totalDone (e.g. 20)
+        // Remaining = Goal - totalDone (e.g. 30)
+        // If done > goal, Remaining = 0, Completed = done (bar grows higher than goal)
+        
+        let done = totalDone;
+        let remaining = Math.max(0, task.goal - totalDone);
+        
+        // Visual tweak: if they exceeded the goal, the "remaining" part is 0,
+        // and the "done" part is the full height.
+        
+        completedData.push(done);
+        remainingData.push(remaining);
+    }
+
+    const ctx = ctxEl.getContext('2d');
+    if (workoutChartInstance) workoutChartInstance.destroy();
+
+    workoutChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Completed',
+                    data: completedData,
+                    backgroundColor: '#FF6B6B',
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                },
+                {
+                    label: 'Remaining',
+                    data: remainingData,
+                    backgroundColor: '#EEEEEE', // Empty space color
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.raw;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    border: { display: false }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    grid: { borderDash: [5, 5], color: '#EEE' },
+                    border: { display: false },
+                    suggestedMax: task.goal // Ensure the empty space is visible up to the goal
                 }
             }
         }
