@@ -348,6 +348,70 @@ canvas#petCanvas {
     border-bottom: none;
 }
 
+/* --- Horizontal Scroll Selector --- */
+.scroll-selector {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding: 5px 2px 15px 2px;
+    margin-bottom: 10px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    /* Dynamic Masking via JS classes */
+    mask-image: linear-gradient(to right, black 100%, black 100%);
+    -webkit-mask-image: linear-gradient(to right, black 100%, black 100%);
+    transition: -webkit-mask-image 0.2s ease, mask-image 0.2s ease;
+}
+
+.scroll-selector.mask-right {
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+}
+
+.scroll-selector.mask-left {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%);
+    mask-image: linear-gradient(to right, transparent 0%, black 15%);
+}
+
+.scroll-selector.mask-both {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+}
+
+.scroll-selector::-webkit-scrollbar {
+    display: none;
+}
+
+.selector-btn {
+    flex: 0 0 calc((100% - 24px) / 3); /* Exactly 3 items with 2 gaps */
+    min-width: 90px;
+    padding: 12px 8px;
+    border: 2px solid #D1D8E0; /* More visible border */
+    border-radius: 12px;
+    background: var(--card-bg);
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Truncate long text */
+    transition: all 0.2s;
+}
+
+.selector-btn:active {
+    transform: scale(0.95);
+}
+
+.selector-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary-dark);
+    box-shadow: var(--shadow-sm);
+}
+
+
 /* --- Navigation --- */
 .bottom-nav {
     position: absolute;

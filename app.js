@@ -560,52 +560,49 @@ function updateChart() {
     });
 }
 
+let activeStatsTaskId = null;
 let workoutChartInstance;
 
 function updateWorkoutChart() {
-    const select = document.getElementById('workoutStatsSelect');
+    const selector = document.getElementById('workoutStatsSelector');
     const ctxEl = document.getElementById('workoutChart');
-    if (!select || !ctxEl) return;
+    if (!selector || !ctxEl) return;
     
     const tasks = getChallenges();
     if (tasks.length === 0) {
-        // No tasks
-        select.style.display = 'none';
+        selector.style.display = 'none';
         ctxEl.style.display = 'none';
         return;
     } else {
-        select.style.display = 'block';
+        selector.style.display = 'flex';
         ctxEl.style.display = 'block';
     }
 
-    // Populate Select if empty
-    if (select.options.length === 0) {
-        tasks.forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = t.name;
-            select.appendChild(opt);
-        });
-    } else {
-        // Just verify current selection is valid, or refresh list if needed?
-        // For simplicity, we assume tasks don't change frequently while on this screen.
-        // If tasks changed, we might want to rebuild the options.
-        // Let's rebuild options if counts differ or force rebuild.
-        if (select.options.length !== tasks.length) {
-            const currentVal = select.value;
-            select.innerHTML = '';
-             tasks.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.name;
-                select.appendChild(opt);
-            });
-            if (currentVal) select.value = currentVal;
-        }
+    // Set default active task if none or not found
+    if (!activeStatsTaskId || !tasks.find(t => t.id === activeStatsTaskId)) {
+        activeStatsTaskId = tasks[0].id;
     }
 
-    const selectedId = parseInt(select.value) || tasks[0].id;
-    const task = tasks.find(t => t.id === selectedId);
+    // Rebuild Selector Buttons
+    selector.innerHTML = '';
+    tasks.forEach(task => {
+        const btn = document.createElement('div');
+        btn.className = 'selector-btn';
+        if (task.id === activeStatsTaskId) btn.classList.add('active');
+        btn.textContent = task.name;
+        btn.onclick = () => {
+            activeStatsTaskId = task.id;
+            updateWorkoutChart();
+        };
+        selector.appendChild(btn);
+    });
+
+    // Attach Scroll Listener for Masking
+    selector.onscroll = updateScrollMask;
+    // Initial check (delay slightly to ensure layout rendering)
+    setTimeout(updateScrollMask, 0);
+
+    const task = tasks.find(t => t.id === activeStatsTaskId);
     if (!task) return;
 
     // Prepare Data for Last 7 Days
@@ -614,7 +611,6 @@ function updateWorkoutChart() {
     const remainingData = [];
     
     const today = new Date();
-    // Use local time for chart labels logic to match getTodayKey
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(today.getDate() - i);
@@ -629,17 +625,8 @@ function updateWorkoutChart() {
         const logs = getActivityLogs(dateKey, task.id);
         const totalDone = logs.reduce((acc, l) => acc + l.val, 0);
         
-        // Bar logic:
-        // Total Height = Task Goal (e.g. 50)
-        // Completed = totalDone (e.g. 20)
-        // Remaining = Goal - totalDone (e.g. 30)
-        // If done > goal, Remaining = 0, Completed = done (bar grows higher than goal)
-        
         let done = totalDone;
         let remaining = Math.max(0, task.goal - totalDone);
-        
-        // Visual tweak: if they exceeded the goal, the "remaining" part is 0,
-        // and the "done" part is the full height.
         
         completedData.push(done);
         remainingData.push(remaining);
@@ -656,14 +643,14 @@ function updateWorkoutChart() {
                 {
                     label: 'Completed',
                     data: completedData,
-                    backgroundColor: '#FF6B6B',
+                    backgroundColor: '#4ECDC4', // Teal/Green
                     borderRadius: 4,
                     barPercentage: 0.6
                 },
                 {
                     label: 'Remaining',
                     data: remainingData,
-                    backgroundColor: '#EEEEEE', // Empty space color
+                    backgroundColor: '#EEEEEE',
                     borderRadius: 4,
                     barPercentage: 0.6
                 }
@@ -693,11 +680,35 @@ function updateWorkoutChart() {
                     beginAtZero: true,
                     grid: { borderDash: [5, 5], color: '#EEE' },
                     border: { display: false },
-                    suggestedMax: task.goal // Ensure the empty space is visible up to the goal
+                    suggestedMax: task.goal,
+                    ticks: {
+                        stepSize: 10
+                    }
                 }
             }
         }
     });
+}
+
+function updateScrollMask() {
+    const el = document.getElementById('workoutStatsSelector');
+    if (!el) return;
+    
+    const atStart = el.scrollLeft <= 2; 
+    const atEnd = Math.abs(el.scrollWidth - el.clientWidth - el.scrollLeft) <= 2;
+    const hasOverflow = el.scrollWidth > el.clientWidth;
+
+    el.classList.remove('mask-left', 'mask-right', 'mask-both');
+
+    if (!hasOverflow) return;
+
+    if (atStart && !atEnd) {
+        el.classList.add('mask-right');
+    } else if (!atStart && atEnd) {
+        el.classList.add('mask-left');
+    } else if (!atStart && !atEnd) {
+        el.classList.add('mask-both');
+    }
 }
 
 // --- Init ---
