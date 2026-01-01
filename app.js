@@ -20,7 +20,7 @@ window.onDBReady = onDBReady;
 function showToast(msg, icon) {
     const toast = document.getElementById('toast');
     if (!toast) return;
-    document.getElementById('toastMessage').textContent = msg;
+    document.getElementById('toastMessage').innerHTML = msg;
     document.getElementById('toastIcon').textContent = icon;
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3000);
@@ -28,14 +28,104 @@ function showToast(msg, icon) {
 
 function onDBReady() {
     console.log("DB Ready. Updating UI...");
+    updatePetState();
     drawPet();
     updateUI();
     updateChart();
+    
+    // Start decay loop (check every minute)
+    setInterval(updatePetState, 60000);
 }
 
 // --- Pet Logic (Pixel Art Renderer) ---
 const canvas = document.getElementById('petCanvas');
 const ctx = canvas.getContext('2d');
+
+function getXPRequired(level) {
+    let req = 100;
+    const baseIncrement = 10;
+    
+    // Calculate cumulative requirement
+    for (let i = 2; i <= level; i++) {
+        // Determine segment: 1-10=0, 11-20=1, 21-30=2...
+        // Note: For level 11, we are calculating the jump from 10->11.
+        // The user says "1-10 base rate... 11-20 1.1x". 
+        // Usually this means the levels *in* that range have that difficulty.
+        // So jump to level 2 (in seg 0) uses mult 0.
+        // Jump to level 11 (in seg 1) uses mult 1.
+        const segment = Math.floor((i - 1) / 10);
+        
+        // Multiplier: 1.2 ^ segment
+        // Seg 0: 1x
+        // Seg 1: 1.2x
+        // Seg 2: 1.44x (approx 1.45x)
+        const multiplier = Math.pow(1.2, segment);
+        
+        req += (baseIncrement * multiplier);
+    }
+    
+    return Math.floor(req);
+}
+
+function updatePetState() {
+    const pet = getSetting('pet');
+    if (!pet) return;
+
+    // Initialize last update time if missing
+    if (!pet.last_happiness_update) {
+        pet.last_happiness_update = Date.now();
+        updateSetting('pet', pet);
+        return;
+    }
+
+    const now = Date.now();
+    const elapsedSeconds = (now - pet.last_happiness_update) / 1000;
+    
+    // Base decay: 1 point every 15 minutes (900s)
+    // If happiness is lower, decay is faster.
+    // Ranges: 100-95 (Seg 0), 95-90 (Seg 1)...
+    // Rate Multiplier = 1.1 ^ Segment
+    // Segment = floor((100 - happiness) / 5)
+    
+    // We simulate step by step to handle crossing thresholds
+    let remainingTime = elapsedSeconds;
+    let changed = false;
+    const baseSecondsPerPoint = 900; 
+
+    while (remainingTime > 0 && pet.happiness > 0) {
+        const segment = Math.floor((100 - pet.happiness) / 5);
+        const rateMultiplier = Math.pow(1.1, segment); // 1x, 1.1x, 1.21x...
+        const secondsForOnePoint = baseSecondsPerPoint / rateMultiplier;
+        
+        if (remainingTime >= secondsForOnePoint) {
+            pet.happiness = Math.max(0, pet.happiness - 1);
+            remainingTime -= secondsForOnePoint;
+            changed = true;
+        } else {
+            break;
+        }
+    }
+
+    if (changed) {
+        pet.last_happiness_update = now - (remainingTime * 1000); // Preserve fractional time
+        updateSetting('pet', pet);
+        updateUI(); // Refresh UI if happiness changed
+    } else {
+        // Just update timestamp to avoid large delta later
+        // But only if we have accumulated significant time (e.g. > 1 min) without drop
+        // Actually, better to NOT update timestamp if no drop happened, so we accumulate time
+        // untill a drop occurs.
+        // HOWEVER, if the user closes the app, we need to save the "progress" towards the next drop.
+        // So we should strictly track `last_happiness_update`. 
+        // My logic above: `remainingTime` is the left over. 
+        // So `last_happiness_update` should be `now - remainingTime*1000`.
+        // This effectively saves the "partial" decay.
+        if (elapsedSeconds > 60) {
+             pet.last_happiness_update = now - (remainingTime * 1000);
+             updateSetting('pet', pet);
+        }
+    }
+}
 
 function drawPet() {
     if (!ctx) return;
@@ -128,6 +218,39 @@ function recordActivity(title, icon) {
     updateSetting('last_activity', {title, time: timeStr});
 }
 
+function gainPetXP(amt) {
+    const pet = getSetting('pet');
+    if (!pet) return;
+    
+    // Default to 0 if missing
+    if (typeof pet.xp === 'undefined') pet.xp = 0;
+    
+    pet.xp += amt;
+    const req = getXPRequired(pet.level);
+    
+    if (pet.xp >= req) {
+        pet.level++;
+        pet.xp = Math.max(0, pet.xp - req); // Keep overflow
+        // Level up is a major event, always show toast even if we just showed rewards
+        // Use a slight delay or just overwrite
+        setTimeout(() => showToast(`Level Up! Lvl ${pet.level}`, "⭐"), 500); 
+    }
+    
+    updateSetting('pet', pet);
+}
+
+function grantRewards(credits, xp) {
+    // 1. Add Credits (Silent)
+    if (credits > 0) addCredits(credits, true);
+    
+    // 2. Show Reward Toast
+    const xpFormatted = xp % 1 === 0 ? xp : xp.toFixed(1);
+    showToast(`+${credits} Credits<br><span style="font-size:0.9em; opacity:0.9;">+${xpFormatted} XP</span>`, "🎉");
+    
+    // 3. Add XP
+    if (xp > 0) gainPetXP(xp);
+}
+
 // --- UI Updates ---
 
 function updateUI() {
@@ -145,10 +268,19 @@ function updateUI() {
     const pet = getSetting('pet');
     if (pet) {
         const hap = document.getElementById('happinessDisplay');
-        if (hap) hap.textContent = pet.happiness + '%';
+        if (hap) hap.textContent = Math.floor(pet.happiness) + '%';
         
         const lvl = document.getElementById('levelDisplay');
         if (lvl) lvl.textContent = pet.level;
+
+        const xpFill = document.getElementById('xpBarFill');
+        const xpText = document.getElementById('xpText');
+        if (xpFill && xpText) {
+            const req = getXPRequired(pet.level);
+            const percent = Math.min(100, (pet.xp / req) * 100);
+            xpFill.style.width = percent + '%';
+            xpText.textContent = `${Math.floor(pet.xp)} / ${req}`;
+        }
         
         const today = getTodayKey();
         const logs = getWeightLogs();
@@ -415,19 +547,8 @@ function submitLogProgress() {
     const amt = parseInt(document.getElementById('logProgressAmount').value);
     if (activeTaskId && amt > 0) {
         addActivityLog(amt, activeTaskId);
-        addCredits(amt);
-        
-        const pet = getSetting('pet');
-        if (pet) {
-            pet.xp += (amt / 10); 
-            if (pet.xp >= 100) {
-                pet.level++;
-                pet.xp = 0;
-                showToast("Level Up!", "⭐");
-            }
-            updateSetting('pet', pet);
-        }
-        
+        // addCredits & gainPetXP replaced by grantRewards
+        grantRewards(amt, amt / 10);
         closeModal('logProgressModal');
     }
 }
@@ -442,7 +563,8 @@ function submitWeight() {
     const val = parseFloat(document.getElementById('weightInput').value);
     if (val) {
         addWeightLog(val);
-        addCredits(100);
+        // addCredits & gainPetXP replaced by grantRewards
+        grantRewards(100, 50);
         closeModal('weighInModal');
     }
 }
@@ -462,7 +584,8 @@ function submitMissingWeight() {
         // We use noon to avoid timezone rolling to previous day
         const isoDate = new Date(dateStr + 'T12:00:00.000Z').toISOString();
         addWeightLog(val, isoDate);
-        addCredits(50); 
+        // addCredits & gainPetXP replaced by grantRewards
+        grantRewards(50, 25);
         closeModal('missingWeighInModal');
     }
 }

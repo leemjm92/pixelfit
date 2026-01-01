@@ -89,10 +89,12 @@ function updateSetting(key, value) {
     if (typeof window.updateUI === 'function') window.updateUI();
 }
 
-function addCredits(amount) {
+function addCredits(amount, suppressToast = false) {
     let current = getSetting('credits') || 0;
     updateSetting('credits', current + amount);
-    dbShowToast(`+${amount} Credits!`, '💰');
+    if (!suppressToast) {
+        dbShowToast(`+${amount} Credits!`, '💰');
+    }
 }
 
 // 2. Challenges
