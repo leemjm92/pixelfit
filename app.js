@@ -17,6 +17,7 @@ window.updateChart = updateChart;
 window.updateWorkoutChart = updateWorkoutChart;
 window.onDBReady = onDBReady;
 window.attackBoss = attackBoss;
+window.petThePet = petThePet;
 
 function showToast(msg, icon) {
     const toast = document.getElementById('toast');
@@ -36,11 +37,60 @@ function onDBReady() {
     
     // Start decay loop (check every minute)
     setInterval(updatePetState, 60000);
+
+    // Add Pet Interaction Listener
+    const canvas = document.getElementById('petCanvas');
+    if (canvas) {
+        canvas.addEventListener('click', petThePet);
+    }
 }
 
 // --- Pet Logic (Pixel Art Renderer) ---
 const canvas = document.getElementById('petCanvas');
 const ctx = canvas.getContext('2d');
+
+function petThePet() {
+    const pet = getSetting('pet');
+    if (!pet) return;
+
+    const now = Date.now();
+    const lastPet = pet.last_pet_interaction || 0;
+    const cooldown = 60000; // 1 minute
+
+    if (now - lastPet < cooldown) {
+        showToast("Pixel is tired... wait a bit!", "💤");
+        return;
+    }
+
+    // Success
+    pet.happiness = Math.min(100, pet.happiness + 2);
+    pet.last_pet_interaction = now;
+    updateSetting('pet', pet);
+    
+    showHeartAnimation();
+    showToast("Pixel loves you! +2 Happiness", "❤️");
+    updateUI();
+}
+
+function showHeartAnimation() {
+    const container = document.querySelector('.pet-canvas-container');
+    if (!container) return;
+    
+    const heart = document.createElement('div');
+    heart.textContent = '❤️';
+    heart.style.position = 'absolute';
+    heart.style.left = '50%';
+    heart.style.top = '50%';
+    heart.style.transform = 'translate(-50%, -50%)';
+    heart.style.fontSize = '32px';
+    heart.style.pointerEvents = 'none';
+    heart.style.zIndex = '10';
+    // Reuse the floatUp animation from style.css
+    heart.style.animation = 'floatUp 1s ease-out forwards';
+    
+    container.appendChild(heart);
+    setTimeout(() => heart.remove(), 1000);
+}
 
 function getXPRequired(level) {
     let req = 100;
