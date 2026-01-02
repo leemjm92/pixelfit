@@ -585,6 +585,52 @@ function updateWorkoutStats() {
 // --- Boss Battle Logic ---
 
 let activeBossTaskId = null;
+let bossAnimFrameId = null;
+
+const BOSS_SPRITE_CONFIG = {
+    img: 'art/push-up-boss/push-up-headbutt-v1.png',
+    width: 256,
+    height: 256,
+    cols: 5,
+    totalFrames: 25,
+    fps: 15
+};
+
+function startBossAnimation() {
+    const el = document.getElementById('bossSprite');
+    if (!el) return;
+
+    el.style.width = `${BOSS_SPRITE_CONFIG.width}px`;
+    el.style.height = `${BOSS_SPRITE_CONFIG.height}px`;
+    el.style.backgroundImage = `url('${BOSS_SPRITE_CONFIG.img}')`;
+    
+    let frame = 0;
+    let lastTime = 0;
+    const interval = 1000 / BOSS_SPRITE_CONFIG.fps;
+
+    function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const delta = timestamp - lastTime;
+
+        if (delta > interval) {
+            const col = frame % BOSS_SPRITE_CONFIG.cols;
+            const row = Math.floor(frame / BOSS_SPRITE_CONFIG.cols);
+            el.style.backgroundPosition = `-${col * BOSS_SPRITE_CONFIG.width}px -${row * BOSS_SPRITE_CONFIG.height}px`;
+            frame = (frame + 1) % BOSS_SPRITE_CONFIG.totalFrames;
+            lastTime = timestamp - (delta % interval);
+        }
+        bossAnimFrameId = requestAnimationFrame(loop);
+    }
+    stopBossAnimation();
+    bossAnimFrameId = requestAnimationFrame(loop);
+}
+
+function stopBossAnimation() {
+    if (bossAnimFrameId) {
+        cancelAnimationFrame(bossAnimFrameId);
+        bossAnimFrameId = null;
+    }
+}
 
 function onTaskClick(task) {
     // Check if task has a boss (either in task object or in settings)
@@ -622,6 +668,8 @@ function openBossBattle(taskId, taskName, bossData) {
     
     document.getElementById('bossBattleModal').style.display = 'flex';
     document.getElementById('bossAttackInput').focus();
+    
+    startBossAnimation();
 }
 
 function attackBoss() {
@@ -638,9 +686,11 @@ function attackBoss() {
 
     // Visuals
     const sprite = document.getElementById('bossSprite');
-    sprite.classList.remove('boss-hit');
-    void sprite.offsetWidth; // Trigger reflow
-    sprite.classList.add('boss-hit');
+    const container = sprite.parentElement;
+    
+    container.classList.remove('boss-hit');
+    void container.offsetWidth; // Trigger reflow
+    container.classList.add('boss-hit');
     
     // Show Damage Number
     const arena = document.querySelector('.boss-arena');
@@ -772,6 +822,7 @@ function submitNewTask() {
 function closeModal(id) {
     const modal = document.getElementById(id);
     if(modal) modal.style.display = 'none';
+    if(id === 'bossBattleModal') stopBossAnimation();
 }
 
 // --- Navigation ---
