@@ -65,6 +65,7 @@ function petThePet() {
     // Success
     pet.happiness = Math.min(100, pet.happiness + 2);
     pet.last_pet_interaction = now;
+    pet.last_happiness_update = now;
     updateSetting('pet', pet);
     
     showHeartAnimation();
@@ -238,6 +239,7 @@ function feedPet() {
         
         const pet = getSetting('pet');
         pet.happiness = Math.min(100, pet.happiness + 20);
+        pet.last_happiness_update = Date.now();
         updateSetting('pet', pet);
         
         showToast("Yum! Happiness +20", "🍎");
@@ -254,6 +256,7 @@ function playPet() {
         
         const pet = getSetting('pet');
         pet.happiness = Math.min(100, pet.happiness + 10);
+        pet.last_happiness_update = Date.now();
         updateSetting('pet', pet);
         
         showToast("Fun! Happiness +10", "🎾");

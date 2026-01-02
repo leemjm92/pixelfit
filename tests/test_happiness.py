@@ -53,5 +53,31 @@ def run_simulation():
     print("-" * 60)
     print(f"Total Time (100 -> 0): {format_duration(total_time)}")
 
+def check_decay_from_2_to_0():
+    print("\n" + "="*60)
+    print("Checking specific decay duration from 2 -> 0")
+    print("="*60)
+    
+    current_happiness = 2
+    base_seconds_per_point = 900
+    total_time = 0
+    
+    while current_happiness > 0:
+        segment = math.floor((100 - current_happiness) / 5)
+        rate_multiplier = 1.1 ** segment
+        seconds_for_point = base_seconds_per_point / rate_multiplier
+        
+        print(f"Happiness {current_happiness} -> {current_happiness - 1}:")
+        print(f"  Segment: {segment}")
+        print(f"  Multiplier: {rate_multiplier:.4f}")
+        print(f"  Time required: {seconds_for_point:.2f}s")
+        
+        total_time += seconds_for_point
+        current_happiness -= 1
+        
+    print("-" * 60)
+    print(f"Total Time (2 -> 0): {format_duration(total_time)}")
+
 if __name__ == "__main__":
     run_simulation()
+    check_decay_from_2_to_0()
