@@ -104,7 +104,14 @@ function getChallenges() {
 
 function addChallenge(name, goal) {
     const id = Date.now();
-    const task = { id, name, goal };
+    // Initialize with a default boss
+    const boss = {
+        hp: 100,
+        maxHp: 100,
+        level: 1,
+        image: '1767253406' // The sprite ID
+    };
+    const task = { id, name, goal, boss };
     
     appState.challenges.push(task);
     
@@ -119,6 +126,33 @@ function addChallenge(name, goal) {
     }
     
     if (typeof window.updateUI === 'function') window.updateUI();
+}
+
+function updateChallenge(id, updates) {
+    const taskIndex = appState.challenges.findIndex(c => c.id === id);
+    if (taskIndex === -1) return;
+    
+    const task = appState.challenges[taskIndex];
+    // Merge updates
+    const updatedTask = { ...task, ...updates };
+    appState.challenges[taskIndex] = updatedTask;
+
+    if (useLocalStorage) {
+        saveToLocalStorage();
+    } else {
+        // We need a new endpoint or just reuse 'api/challenge' if it supports upsert/replace
+        // For simplicity in this prototype, we might just assume the server doesn't strictly validate ID uniqueness or we add an update endpoint.
+        // However, standard SQL INSERT would fail on PK conflict. 
+        // We should add a specific update endpoint or use REPLACE INTO.
+        // The server.py uses "INSERT OR IGNORE" for settings but "INSERT" for challenges.
+        // Let's modify server.py to handle updates or just rely on local state for the immediate session + settings persistence?
+        // Actually, challenges are rows. We can't easily update a JSON column inside a row without schema change if we stored boss data there.
+        // Wait, the current schema is: `challenges (id INTEGER PRIMARY KEY, name TEXT, goal INTEGER)`
+        // It DOES NOT have a column for 'boss' data!
+        // I need to update the Schema or store the extra data in `settings` or a new table.
+        // OR: Since the user didn't ask for full backend migration yet, I can store the "Boss State" in a new `settings` key called `boss_states`.
+        // That's a clever workaround. `boss_states` = { taskId: { hp, maxHp... } }
+    }
 }
 
 function deleteChallenge(id) {
@@ -195,6 +229,18 @@ function addActivityLog(val, taskId) {
     }
 
     if (typeof window.updateUI === 'function') window.updateUI();
+}
+
+// 5. Boss State Management (Stored in Settings to avoid Schema change)
+function getBossState(challengeId) {
+    const allStates = getSetting('boss_states') || {};
+    return allStates[challengeId] || null;
+}
+
+function updateBossState(challengeId, state) {
+    let allStates = getSetting('boss_states') || {};
+    allStates[challengeId] = state;
+    updateSetting('boss_states', allStates);
 }
 
 function getTodayKey() {

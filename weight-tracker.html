@@ -6,6 +6,7 @@
     <title>PixelFit Pet</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="art/push-up-boss/spritesheet.css">
 </head>
 <body>
 
@@ -201,6 +202,38 @@
             </div>
             <button class="btn-primary" onclick="submitLogProgress()">Add Progress</button>
             <button class="btn-primary btn-cancel" onclick="closeModal('logProgressModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Boss Battle Modal -->
+    <div class="modal-overlay" id="bossBattleModal">
+        <div class="modal boss-modal">
+            <div class="boss-header">
+                <h2 id="bossName">Boss Name</h2>
+                <span class="boss-level">Lvl 1</span>
+            </div>
+            
+            <div class="boss-arena">
+                <div class="boss-health-bar-container">
+                    <div class="boss-health-bar-fill" id="bossHpBar" style="width: 100%;"></div>
+                    <span class="boss-health-text" id="bossHpText">100/100</span>
+                </div>
+                
+                <div class="boss-sprite-container">
+                    <!-- The sprite class will be injected here -->
+                    <div id="bossSprite" class="boss-pushup-anim"></div>
+                    <div class="damage-overlay" id="damageOverlay"></div>
+                </div>
+            </div>
+
+            <div class="boss-controls">
+                <p style="text-align:center; color:var(--text-light); margin-bottom:10px;">Enter reps to deal damage!</p>
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <input type="number" id="bossAttackInput" class="form-input" placeholder="Reps" style="text-align:center; font-size:18px; font-weight:bold;">
+                    <button class="btn-primary" style="width:auto; padding:0 20px; background:#FF5252;" onclick="attackBoss()">⚔️ Attack</button>
+                </div>
+                <button class="btn-primary btn-cancel" onclick="closeModal('bossBattleModal')">Run Away</button>
+            </div>
         </div>
     </div>
 

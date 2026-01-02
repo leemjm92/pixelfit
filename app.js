@@ -16,6 +16,7 @@ window.updateUI = updateUI;
 window.updateChart = updateChart;
 window.updateWorkoutChart = updateWorkoutChart;
 window.onDBReady = onDBReady;
+window.attackBoss = attackBoss;
 
 function showToast(msg, icon) {
     const toast = document.getElementById('toast');
@@ -448,7 +449,7 @@ function renderTasks() {
         
         div.onclick = () => {
             if (!div.classList.contains('swiped')) {
-                openLogProgressModal(task.id, task.name);
+                onTaskClick(task);
             }
         };
         
@@ -529,6 +530,117 @@ function updateWorkoutStats() {
         `;
         container.appendChild(row);
     });
+}
+
+// --- Boss Battle Logic ---
+
+let activeBossTaskId = null;
+
+function onTaskClick(task) {
+    // Check if task has a boss (either in task object or in settings)
+    const bossState = getBossState(task.id);
+    
+    // If no state exists but we want to force bosses for all tasks (for now):
+    if (!bossState) {
+        // Init default boss state
+         const newBoss = {
+            hp: 100,
+            maxHp: 100,
+            level: 1,
+            image: 'boss-pushup-anim'
+        };
+        updateBossState(task.id, newBoss);
+        openBossBattle(task.id, task.name, newBoss);
+    } else {
+        openBossBattle(task.id, task.name, bossState);
+    }
+}
+
+function openBossBattle(taskId, taskName, bossData) {
+    activeBossTaskId = taskId;
+    
+    document.getElementById('bossName').textContent = taskName + " Boss";
+    document.querySelector('.boss-level').textContent = "Lvl " + bossData.level;
+    
+    // Update HP Bar
+    const hpPercent = (bossData.hp / bossData.maxHp) * 100;
+    document.getElementById('bossHpBar').style.width = hpPercent + '%';
+    document.getElementById('bossHpText').textContent = `${Math.ceil(bossData.hp)}/${bossData.maxHp}`;
+    
+    // Reset inputs
+    document.getElementById('bossAttackInput').value = '';
+    
+    document.getElementById('bossBattleModal').style.display = 'flex';
+    document.getElementById('bossAttackInput').focus();
+}
+
+function attackBoss() {
+    const dmg = parseInt(document.getElementById('bossAttackInput').value);
+    if (!activeBossTaskId || !dmg || dmg <= 0) return;
+
+    // 1. Log the activity (Standard App Logic)
+    addActivityLog(dmg, activeBossTaskId);
+    grantRewards(dmg, dmg / 5); // Base rewards
+
+    // 2. Boss Logic
+    const bossState = getBossState(activeBossTaskId);
+    if (!bossState) return;
+
+    // Visuals
+    const sprite = document.getElementById('bossSprite');
+    sprite.classList.remove('boss-hit');
+    void sprite.offsetWidth; // Trigger reflow
+    sprite.classList.add('boss-hit');
+    
+    // Show Damage Number
+    const arena = document.querySelector('.boss-arena');
+    const dmgNum = document.createElement('div');
+    dmgNum.className = 'damage-number';
+    dmgNum.textContent = `-${dmg}`;
+    dmgNum.style.left = '50%';
+    dmgNum.style.top = '50%';
+    arena.appendChild(dmgNum);
+    setTimeout(() => dmgNum.remove(), 1000);
+
+    // Apply Damage
+    bossState.hp -= dmg;
+    
+    if (bossState.hp <= 0) {
+        bossState.hp = 0;
+        updateBossState(activeBossTaskId, bossState);
+        updateBossUI(bossState);
+        setTimeout(() => bossDefeated(activeBossTaskId, bossState), 600); // Wait for anim
+    } else {
+        updateBossState(activeBossTaskId, bossState);
+        updateBossUI(bossState);
+        // Clear input for next attack
+        document.getElementById('bossAttackInput').value = '';
+        document.getElementById('bossAttackInput').focus();
+    }
+}
+
+function updateBossUI(bossState) {
+    const hpPercent = (bossState.hp / bossState.maxHp) * 100;
+    document.getElementById('bossHpBar').style.width = hpPercent + '%';
+    document.getElementById('bossHpText').textContent = `${Math.ceil(bossState.hp)}/${bossState.maxHp}`;
+}
+
+function bossDefeated(taskId, bossState) {
+    // 1. Victory Rewards
+    const bonusCredits = 500 * bossState.level;
+    const bonusXP = 100 * bossState.level;
+    grantRewards(bonusCredits, bonusXP);
+    
+    showToast(`BOSS DEFEATED!<br>+${bonusCredits}c +${bonusXP}xp`, "🏆");
+    
+    // 2. Level Up Boss
+    bossState.level++;
+    bossState.maxHp = Math.floor(bossState.maxHp * 1.5);
+    bossState.hp = bossState.maxHp;
+    
+    updateBossState(taskId, bossState);
+    
+    closeModal('bossBattleModal');
 }
 
 // --- Task Interactions ---
