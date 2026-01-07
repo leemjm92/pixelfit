@@ -429,24 +429,26 @@ canvas#petCanvas {
 /* --- Navigation --- */
 .bottom-nav {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
+    bottom: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 180px;
     background: var(--card-bg);
-    padding: 15px 30px 25px 30px;
-    padding-bottom: calc(25px + env(safe-area-inset-bottom));
-    border-top-left-radius: 30px;
-    border-top-right-radius: 30px;
-    box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+    padding: 12px 24px;
+    border-radius: 50px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    gap: 8px;
     z-index: 100;
 }
 
 .nav-item {
     border: none;
-    background: none;
+    background: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -454,17 +456,42 @@ canvas#petCanvas {
     cursor: pointer;
     color: #B2BEC3;
     font-family: inherit;
-    transition: color 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 8px 12px;
+    border-radius: 20px;
+    position: relative;
+}
+
+.nav-item:active {
+    transform: scale(0.92);
 }
 
 .nav-item.active {
-    color: var(--primary-dark);
+    color: var(--primary);
+    background: rgba(78, 205, 196, 0.1);
+}
+
+.nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: var(--primary);
+    border-radius: 50%;
 }
 
 .nav-item svg {
     width: 24px;
     height: 24px;
     fill: currentColor;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-item.active svg {
+    transform: scale(1.1);
 }
 
 .nav-item span {
@@ -736,4 +763,25 @@ canvas#petCanvas {
 @keyframes floatUp {
     0% { opacity: 1; transform: translateY(0) scale(1); }
     100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+}
+
+/* --- Desktop Responsive --- */
+@media (min-width: 768px) {
+    /* On desktop, use fixed positioning for nav to avoid excessive whitespace */
+    .bottom-nav {
+        position: fixed;
+        bottom: 30px;
+    }
+
+    /* Reduce padding on content areas for desktop */
+    .content-area {
+        padding-bottom: 100px;
+    }
+
+    /* Adjust FAB position for desktop */
+    .fab {
+        position: fixed;
+        bottom: 100px;
+        right: calc(50% - 290px); /* Position relative to centered 600px container */
+    }
 }
